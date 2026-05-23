@@ -57,6 +57,102 @@ const diseaseDatabase = {
 };
 
 // ==========================================================================
+// CUSTOM TOAST NOTIFICATIONS
+// ==========================================================================
+function showToast(message, type = 'info', duration = 3000) {
+    const existingToast = document.querySelector('.custom-toast');
+    if (existingToast) existingToast.remove();
+    
+    const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+    const colors = { success: '#3fb950', error: '#f85149', warning: '#d29922', info: '#58a6ff' };
+    
+    const toast = document.createElement('div');
+    toast.className = 'custom-toast';
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background: ${colors[type]};
+        color: white;
+        padding: 12px 24px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 500;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        max-width: 90vw;
+    `;
+    toast.innerHTML = `${icons[type]} ${message}`;
+    document.body.appendChild(toast);
+    
+    requestAnimationFrame(() => {
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+    });
+    
+    setTimeout(() => {
+        toast.style.transform = 'translateX(-50%) translateY(100px)';
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
+}
+
+function showConfirmToast(message, onConfirm) {
+    const existing = document.querySelector('.custom-confirm');
+    if (existing) existing.remove();
+    
+    const confirm = document.createElement('div');
+    confirm.className = 'custom-confirm';
+    confirm.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background: var(--bg-panel, #131820);
+        color: var(--text-primary, #e8ecf1);
+        padding: 16px 24px;
+        border-radius: 12px;
+        font-size: 14px;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        z-index: 10001;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        border: 1px solid var(--border-panel, rgba(255,255,255,0.08));
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        max-width: 90vw;
+    `;
+    confirm.innerHTML = `
+        <span>⚠️ ${message}</span>
+        <div style="display:flex; gap:8px;">
+            <button class="confirm-yes" style="padding:6px 16px; border-radius:6px; border:none; background:#f85149; color:white; cursor:pointer; font-weight:600; white-space:nowrap;">Yes</button>
+            <button class="confirm-no" style="padding:6px 16px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:var(--text-primary, #e8ecf1); cursor:pointer; white-space:nowrap;">No</button>
+        </div>
+    `;
+    document.body.appendChild(confirm);
+    
+    requestAnimationFrame(() => {
+        confirm.style.transform = 'translateX(-50%) translateY(0)';
+    });
+    
+    confirm.querySelector('.confirm-yes').onclick = () => {
+        confirm.style.transform = 'translateX(-50%) translateY(100px)';
+        setTimeout(() => confirm.remove(), 300);
+        if (onConfirm) onConfirm();
+    };
+    
+    confirm.querySelector('.confirm-no').onclick = () => {
+        confirm.style.transform = 'translateX(-50%) translateY(100px)';
+        setTimeout(() => confirm.remove(), 300);
+    };
+}
+
+// ==========================================================================
 // GLOBAL VARIABLES
 // ==========================================================================
 let stream = null;
@@ -67,7 +163,7 @@ let videoTrack = null;
 let currentGPS = "Nairobi, KE";
 let allCachedScans = []; 
 const MODEL_URL = "./model/";
-// Make currentGPS globally accessible
+
 window.currentGPS = currentGPS;
 
 // DOM Elements
@@ -115,21 +211,16 @@ async function initializeApp() {
     console.log('Starting app...');
     try {
         initDOMElements();
-        
-        // Initialize database
         await initializeDatabase();
         
-        // Wait for database to be ready
         if (!window.db) {
             await new Promise(resolve => window.addEventListener('databaseReady', resolve, { once: true }));
         }
         
         console.log('Database ready');
         loadHistoryFromDB();
-        
         updateStatus('loading');
         
-        // Load AI model
         try {
             model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
             console.log('AI Model loaded');
@@ -137,7 +228,6 @@ async function initializeApp() {
         } catch (modelError) {
             console.warn('AI Model failed to load, using demo mode:', modelError);
             updateStatus('ready');
-            // Mock model for testing
             model = {
                 predict: async () => [
                     { className: 'healthy', probability: 0.95 },
@@ -151,7 +241,6 @@ async function initializeApp() {
         updateLanguageUI();
         setupEventListeners();
         
-        // Update user greeting
         if (window.auth && window.auth.getUserData()) {
             const userGreeting = document.getElementById('user-greeting');
             if (userGreeting) {
@@ -171,7 +260,6 @@ async function initializeApp() {
 // ==========================================================================
 function updateStatus(state) {
     if (!statusDiv) return;
-    
     switch(state) {
         case 'loading':
             statusDiv.innerText = diseaseDatabase[currentLanguage]["loading_model"];
@@ -418,13 +506,16 @@ function setupEventListeners() {
     // Clear history
     if (btnClearHistory) {
         btnClearHistory.addEventListener('click', () => {
-            if (!window.db || !confirm('Clear all scan history?')) return;
-            const transaction = window.db.transaction(["scans"], "readwrite");
-            transaction.objectStore("scans").clear();
-            transaction.oncomplete = () => {
-                loadHistoryFromDB();
-                updateQuickStats();
-            };
+            if (!window.db) return;
+            showConfirmToast('Clear all scan history?', () => {
+                const transaction = window.db.transaction(["scans"], "readwrite");
+                transaction.objectStore("scans").clear();
+                transaction.oncomplete = () => {
+                    loadHistoryFromDB();
+                    updateQuickStats();
+                    showToast('History cleared successfully', 'success');
+                };
+            });
         });
     }
     
@@ -458,9 +549,10 @@ function setupEventListeners() {
                 btnWebcam.innerText = currentLanguage === 'sw' ? "Zima Kamera" : "Stop Camera";
                 btnWebcam.className = "btn btn-outline";
                 videoTrack = stream.getVideoTracks()[0];
+                showToast('Camera started', 'success');
             } catch (err) {
                 console.error('Camera error:', err);
-                alert("Unable to access camera. Please check permissions.");
+                showToast('Unable to access camera. Please check permissions.', 'error');
             }
         });
     }
@@ -481,7 +573,7 @@ function setupEventListeners() {
             if (!file) return;
             
             if (!file.type.startsWith('image/')) {
-                alert('Please select an image file.');
+                showToast('Please select an image file.', 'warning');
                 return;
             }
             
@@ -494,10 +586,9 @@ function setupEventListeners() {
                 placeholderText.classList.add('hidden');
                 if (webcamElement) webcamElement.classList.add('hidden');
                 if (btnCapture) btnCapture.classList.add('hidden');
-                
                 imagePreview.onload = () => runInference(imagePreview);
             };
-            reader.onerror = () => alert('Failed to read file.');
+            reader.onerror = () => showToast('Failed to read file.', 'error');
             reader.readAsDataURL(file);
         });
     }
@@ -523,10 +614,8 @@ function setupEventListeners() {
 🛡️ *Prevention:* ${tPrev}`;
 
             navigator.clipboard.writeText(report).then(() => {
-                const oldText = btnExportReport.innerText;
-                btnExportReport.innerText = "✅ Copied!";
-                setTimeout(() => { btnExportReport.innerText = oldText; }, 2000);
-            }).catch(() => alert('Failed to copy. Please try again.'));
+                showToast('Report copied to clipboard!', 'success');
+            }).catch(() => showToast('Failed to copy. Please try again.', 'error'));
         });
     }
 }
@@ -542,7 +631,6 @@ function updateLanguageUI() {
     if (lblHistory) lblHistory.innerText = isSw ? "Historia ya Vipimo" : "Scan History";
     if (lblAnalytics) lblAnalytics.innerText = isSw ? "Takwimu za Magonjwa" : "Disease Analytics";
     if (searchHistoryInput) searchHistoryInput.placeholder = isSw ? "Tafuta kwa ugonjwa au eneo..." : "Search by disease or location...";
-    if (btnExportReport) btnExportReport.innerText = isSw ? "📱 Share via WhatsApp" : "📱 Share via WhatsApp";
     if (btnClearHistory) btnClearHistory.innerText = isSw ? "Futa Yote" : "Clear All";
 }
 
@@ -570,7 +658,7 @@ function stopWebcam() {
 // ==========================================================================
 async function runInference(inputElement) {
     if (!model) { 
-        alert("AI Model not loaded yet."); 
+        showToast('AI Model not loaded yet. Please wait.', 'warning'); 
         return; 
     }
     
@@ -598,9 +686,11 @@ async function runInference(inputElement) {
         updateStatus('complete');
         displayResult(currentDetectedDisease, confidencePercentage);
         saveScanToDB(currentDetectedDisease, confidencePercentage);
+        showToast('Diagnosis complete!', 'success');
     } catch (error) {
         console.error('Inference error:', error);
         updateStatus('error');
+        showToast('Error analyzing image. Please try again.', 'error');
     }
 }
 
@@ -616,6 +706,7 @@ if (themeToggleBtn) {
         const newTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', newTheme);
         localStorage.setItem('mimeahub-theme', newTheme);
+        showToast(`Theme switched to ${newTheme} mode`, 'info', 2000);
     });
 }
 

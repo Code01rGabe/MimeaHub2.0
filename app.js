@@ -67,7 +67,6 @@ let videoTrack = null;
 let currentGPS = "Nairobi, KE";
 let allCachedScans = []; 
 const MODEL_URL = "./model/";
-
 // Make currentGPS globally accessible
 window.currentGPS = currentGPS;
 

@@ -1017,3 +1017,9 @@ body {
 
 /* Utility */
 .hidden { display: none !important; }
+
+.map-filter-btn.active {
+    background: var(--accent-blue) !important;
+    color: white !important;
+    border-color: var(--accent-blue) !important;
+}

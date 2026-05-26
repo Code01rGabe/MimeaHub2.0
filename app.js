@@ -248,6 +248,11 @@ async function initializeApp() {
             }
         }
         
+        // Initialize map if map.js is loaded
+        if (typeof initDiseaseMap === 'function') {
+            setTimeout(initDiseaseMap, 1000);
+        }
+        
         console.log('App ready!');
     } catch (error) {
         console.error('App failed:', error);
@@ -344,6 +349,10 @@ function loadHistoryFromDB() {
                 renderHistoryCards(allCachedScans);
                 calculateAnalytics(allCachedScans);
                 updateQuickStats();
+                // Refresh disease map if available
+                if (typeof updateMapMarkers === 'function') {
+                    setTimeout(updateMapMarkers, 500);
+                }
             }
         };
     } catch (error) {
@@ -593,7 +602,7 @@ function setupEventListeners() {
         });
     }
     
-    // Export report
+    // Export WhatsApp report
     if (btnExportReport) {
         btnExportReport.addEventListener('click', () => {
             const dName = document.getElementById('disease-name')?.innerText || 'Unknown';
@@ -616,6 +625,18 @@ function setupEventListeners() {
             navigator.clipboard.writeText(report).then(() => {
                 showToast('Report copied to clipboard!', 'success');
             }).catch(() => showToast('Failed to copy. Please try again.', 'error'));
+        });
+    }
+    
+    // PDF Export button
+    const btnExportPdf = document.getElementById('btn-export-pdf');
+    if (btnExportPdf) {
+        btnExportPdf.addEventListener('click', () => {
+            if (typeof exportPDFReport === 'function') {
+                exportPDFReport();
+            } else {
+                showToast('PDF export not available. Please check if pdf.js is loaded.', 'error');
+            }
         });
     }
 }

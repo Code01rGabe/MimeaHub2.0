@@ -12,6 +12,17 @@
     <!-- TensorFlow and Teachable Machine -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.3/dist/teachablemachine-image.min.js"></script>
+
+<!-- Leaflet CSS for Disease Map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<!-- jsPDF for PDF Export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- Leaflet JS for Disease Map -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Heat Map library for Leaflet -->
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 </head>
 <body>
     <div class="dashboard-shell">
@@ -115,9 +126,7 @@
                             </div>
                         </div>
                         
-                        <button id="btn-export-report" class="btn btn-success btn-block">
-                            📱 Share via WhatsApp
-                        </button>
+                    
                     </div>
                 </div>
             </div>
@@ -172,12 +181,44 @@
                     </div>
                 </div>
             </div>
+
+         <!-- Disease Map Card -->
+
+<div class="card">
+    <div class="card-header">
+        <h3>📍 Disease Map</h3>
+        <button class="btn-text" onclick="toggleMapView()">↕ Expand</button>
+    </div>
+    
+    <div style="display:flex; gap:6px; margin-bottom:10px;">
+        <button class="map-filter-btn active" data-filter="all" onclick="filterMapByDisease('all')" 
+            style="padding:4px 10px; border-radius:14px; border:1px solid #555; background:#333; color:white; cursor:pointer; font-size:11px;">
+            All
+        </button>
+        <button class="map-filter-btn" data-filter="healthy" onclick="filterMapByDisease('healthy')"
+            style="padding:4px 10px; border-radius:14px; border:1px solid #555; background:#333; color:white; cursor:pointer; font-size:11px;">
+            Healthy
+        </button>
+        <button class="map-filter-btn" data-filter="tomato_late_blight" onclick="filterMapByDisease('tomato_late_blight')"
+            style="padding:4px 10px; border-radius:14px; border:1px solid #555; background:#333; color:white; cursor:pointer; font-size:11px;">
+            Late Blight
+        </button>
+        <button class="map-filter-btn" data-filter="potato_early_blight" onclick="filterMapByDisease('potato_early_blight')"
+            style="padding:4px 10px; border-radius:14px; border:1px solid #555; background:#333; color:white; cursor:pointer; font-size:11px;">
+            Early Blight
+        </button>
+    </div>
+    
+    <div id="disease-map" style="height: 250px; border-radius: 10px; overflow: hidden;"></div>
+</div>
             
         </main>
     </div>
 
     <script src="db.js"></script>
-    <script src="auth.js"></script>
-    <script src="app.js"></script>
+<script src="auth.js"></script>
+<script src="map.js"></script>
+<script src="pdf.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
